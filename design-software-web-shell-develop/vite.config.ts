@@ -125,20 +125,20 @@ export default defineConfig(({ mode }) => {
       alias: {
         ...(useStubs ? stubAliasRecord() : {}),
         '@sena/frontend-platform': fileURLToPath(
-          new URL('../design-software-frontend-platform/src/index.ts', import.meta.url),
+          new URL('../design-software-frontend-platform-develop/src/index.ts', import.meta.url),
         ),
         // HU-SHELL-005: el shell consume los tokens canonicos de `design-system`.
         // El alias especifico va PRIMERO: Vite resuelve en orden y el alias corto
         // capturaria `@sena/design-system/tokens.css` contra el entry TS.
         '@sena/design-system/tokens.css': fileURLToPath(
-          new URL('../design-software-design-system/src/tokens/tokens.generated.css', import.meta.url),
+          new URL('../design-software-design-system-develop/src/tokens/tokens.generated.css', import.meta.url),
         ),
         // HU-SHELL-006: los Web Components base. Tambien antes del alias corto.
         '@sena/design-system/components': fileURLToPath(
-          new URL('../design-software-design-system/src/components/index.ts', import.meta.url),
+          new URL('../design-software-design-system-develop/src/components/index.ts', import.meta.url),
         ),
         '@sena/design-system': fileURLToPath(
-          new URL('../design-software-design-system/src/index.ts', import.meta.url),
+          new URL('../design-software-design-system-develop/src/index.ts', import.meta.url),
         ),
       },
     },
