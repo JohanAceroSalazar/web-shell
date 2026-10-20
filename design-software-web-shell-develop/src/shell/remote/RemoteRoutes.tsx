@@ -1,4 +1,5 @@
 import { Route, Routes, useLocation } from 'react-router-dom';
+import type { Me } from '@sena/frontend-platform';
 
 import { REMOTE_DEFINITIONS, type RemoteRegistry } from './remote-registry';
 import { RemoteBoundary } from './RemoteBoundary';
@@ -8,6 +9,7 @@ import { RemoteIndex } from '../components/RemoteIndex/RemoteIndex';
 export interface RemoteRoutesProps {
   registry: RemoteRegistry;
   manifestSource?: string;
+  user?: Me | null;
 }
 
 interface ShellHttpRequest {
@@ -55,7 +57,13 @@ const monitoringCatalogs = {
   ],
 };
 
-function getRemoteProps(definition: (typeof REMOTE_DEFINITIONS)[number]): Record<string, unknown> {
+function getRemoteProps(
+  definition: (typeof REMOTE_DEFINITIONS)[number],
+  user?: Me | null,
+): Record<string, unknown> {
+  if (definition.domain === 'reference-data') {
+    return { basePath: definition.basePath, permissions: user?.features ?? [] };
+  }
   if (definition.domain !== 'monitoring') return { basePath: definition.basePath };
 
   return {
@@ -83,8 +91,9 @@ function getRemoteProps(definition: (typeof REMOTE_DEFINITIONS)[number]): Record
  * Cuando el ambiente no declara URLs en `remotes.<env>.json`, los dominios no montan y
  * se muestra `RemoteUnavailable` en vez de una pantalla vacía.
  */
-export const RemoteRoutes = ({ registry, manifestSource }: RemoteRoutesProps) => {
+export const RemoteRoutes = ({ registry, manifestSource, user }: RemoteRoutesProps) => {
   const { pathname } = useLocation();
+  const IamRemote = registry.get('iam');
 
   return (
     <Routes>
@@ -103,6 +112,17 @@ export const RemoteRoutes = ({ registry, manifestSource }: RemoteRoutesProps) =>
           />
         }
       />
+      {['/login', '/forgot-password', '/reset-password'].map((path) => (
+        <Route
+          key={path}
+          path={path}
+          element={
+            <RemoteBoundary domain="iam" resetKey={path}>
+              <IamRemote basePath="/iam" />
+            </RemoteBoundary>
+          }
+        />
+      ))}
       {REMOTE_DEFINITIONS.map((definition) => {
         const Remote = registry.get(definition.domain);
         return (
@@ -111,7 +131,7 @@ export const RemoteRoutes = ({ registry, manifestSource }: RemoteRoutesProps) =>
             path={`${definition.basePath}/*`}
             element={
               <RemoteBoundary domain={definition.domain} resetKey={definition.basePath}>
-                <Remote {...getRemoteProps(definition)} />
+                <Remote {...getRemoteProps(definition, user)} />
               </RemoteBoundary>
             }
           />
