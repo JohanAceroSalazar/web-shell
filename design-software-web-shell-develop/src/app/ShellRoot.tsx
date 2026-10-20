@@ -34,11 +34,12 @@ export const ShellRoot = ({
   notificationDataSource,
   manifestSource,
 }: ShellRootProps) => {
-  const { state, logout } = useCurrentUser(dataSource);
+  const { state, reload, logout } = useCurrentUser(dataSource);
 
   // El router es la unica fuente de verdad de la ruta. Mantener un `useState` paralelo
   // con `pushState` manual desincroniza el shell: la URL cambia pero la vista no.
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
   const navigate = useNavigate();
   const onNavigate = useCallback((next: string) => navigate(next), [navigate]);
 
@@ -46,9 +47,22 @@ export const ShellRoot = ({
 
   useEffect(() => {
     if (state.status === 'authenticated' && pathname === '/login') {
-      navigate('/', { replace: true });
+      const routeState = location.state as { from?: unknown } | null;
+      const returnTo = typeof routeState?.from === 'string' ? routeState.from : '/';
+      navigate(returnTo, { replace: true });
     }
-  }, [navigate, pathname, state.status]);
+  }, [location.state, navigate, pathname, state.status]);
+
+  useEffect(() => {
+    const reloadAfterLogin = () => { void reload(); };
+    window.addEventListener('sena:session-created', reloadAfterLogin);
+    return () => window.removeEventListener('sena:session-created', reloadAfterLogin);
+  }, [reload]);
+
+  const isPublicIAMRoute = ['/login', '/forgot-password', '/reset-password'].includes(pathname);
+  if (isPublicIAMRoute && state.status !== 'authenticated') {
+    return <RemoteRoutes registry={remoteRegistry} manifestSource={manifestSource} user={null} />;
+  }
 
   const handleLogout = useCallback(async (): Promise<void> => {
     await logout();
@@ -76,7 +90,7 @@ export const ShellRoot = ({
           {...(notificationDataSource === undefined ? {} : { notificationDataSource })}
         >
           {isOnline ? null : <OfflineBanner />}
-          <RemoteRoutes registry={remoteRegistry} manifestSource={manifestSource} />
+          <RemoteRoutes registry={remoteRegistry} manifestSource={manifestSource} user={state.user} />
         </AppShell>
       )}
     </RequireSession>

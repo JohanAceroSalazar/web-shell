@@ -89,6 +89,8 @@ export default defineConfig(({ mode }) => {
   const environment = resolveEnvironment(mode);
   const manifest = readManifest(environment);
   const missing = REMOTE_NAMES.filter((name) => manifest[name] === undefined);
+  const iamProxyTarget = env['IAM_API_PROXY_TARGET'];
+  const referenceDataProxyTarget = env['REFERENCE_DATA_API_PROXY_TARGET'];
 
   // El shell trabaja con stubs mientras los remotes no estan construidos ni desplegados,
   // o cuando desarrollo pide explicitamente `VITE_REMOTE_SOURCE=mock`.
@@ -125,30 +127,44 @@ export default defineConfig(({ mode }) => {
       alias: {
         ...(useStubs ? stubAliasRecord() : {}),
         '@sena/frontend-platform': fileURLToPath(
-          new URL('../design-software-frontend-platform-develop/src/index.ts', import.meta.url),
+          new URL('../../platform/design-software-frontend-platform-develop/src/index.ts', import.meta.url),
         ),
         // HU-SHELL-005: el shell consume los tokens canonicos de `design-system`.
         // El alias especifico va PRIMERO: Vite resuelve en orden y el alias corto
         // capturaria `@sena/design-system/tokens.css` contra el entry TS.
         '@sena/design-system/tokens.css': fileURLToPath(
-          new URL('../design-software-design-system-develop/src/tokens/tokens.generated.css', import.meta.url),
+          new URL('../../design-software-design-system-develop/src/tokens/tokens.generated.css', import.meta.url),
         ),
         // HU-SHELL-006: los Web Components base. Tambien antes del alias corto.
         '@sena/design-system/components': fileURLToPath(
-          new URL('../design-software-design-system-develop/src/components/index.ts', import.meta.url),
+          new URL('../../design-software-design-system-develop/src/components/index.ts', import.meta.url),
         ),
         '@sena/design-system': fileURLToPath(
-          new URL('../design-software-design-system-develop/src/index.ts', import.meta.url),
+          new URL('../../design-software-design-system-develop/src/index.ts', import.meta.url),
         ),
       },
     },
     server: {
       port: 5000,
       proxy: {
-        '/api/v1': {
-          target: 'http://localhost:8080',
-          changeOrigin: true,
-        },
+        ...(referenceDataProxyTarget
+          ? {
+              '/api/v1/auth': {
+                target: iamProxyTarget ?? 'http://localhost:8080',
+                changeOrigin: true,
+              },
+              '/api/v1': {
+                target: referenceDataProxyTarget,
+                changeOrigin: true,
+                rewrite: (path: string) => path.replace(/^\/api\/v1/, ''),
+              },
+            }
+          : {
+              '/api/v1': {
+                target: iamProxyTarget ?? 'http://localhost:8080',
+                changeOrigin: true,
+              },
+            }),
         '/time-slots': {
           target: 'http://localhost:8080',
           changeOrigin: true,
