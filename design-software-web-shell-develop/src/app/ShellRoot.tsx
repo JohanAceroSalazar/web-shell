@@ -59,15 +59,15 @@ export const ShellRoot = ({
     return () => window.removeEventListener('sena:session-created', reloadAfterLogin);
   }, [reload]);
 
-  const isPublicIAMRoute = ['/login', '/forgot-password', '/reset-password'].includes(pathname);
-  if (isPublicIAMRoute && state.status !== 'authenticated') {
-    return <RemoteRoutes registry={remoteRegistry} manifestSource={manifestSource} user={null} />;
-  }
-
   const handleLogout = useCallback(async (): Promise<void> => {
     await logout();
     navigate('/login', { replace: true });
   }, [logout, navigate]);
+
+  const isPublicIAMRoute = ['/login', '/forgot-password', '/reset-password'].includes(pathname);
+  if (isPublicIAMRoute && state.status !== 'authenticated') {
+    return <RemoteRoutes registry={remoteRegistry} manifestSource={manifestSource} user={null} />;
+  }
 
   if (state.status === 'loading') {
     return <div role="status">Cargando sesion...</div>;
